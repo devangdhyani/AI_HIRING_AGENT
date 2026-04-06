@@ -1,0 +1,7 @@
+streamlit
+groq
+pdfplumber
+python-dotenv
+requests
+fpdf2
+streamlit-javascript
