@@ -1,35 +1,11 @@
 import os
-import requests
 import streamlit as st
-import streamlit.components.v1 as components
-from streamlit_javascript import st_javascript
 from dotenv import load_dotenv
 from backend import process_batch
 import backend
 from ranker import rank_candidates
 
 load_dotenv()
-
-RECAPTCHA_SITE_KEY   = os.getenv("RECAPTCHA_SITE_KEY", "")
-RECAPTCHA_SECRET_KEY = os.getenv("RECAPTCHA_SECRET_KEY", "")
-
-# ---------------------------------------------------------------------------
-# reCAPTCHA backend verification
-# ---------------------------------------------------------------------------
-
-def verify_recaptcha(token: str) -> bool:
-    """Send token to Google siteverify and return True only on success."""
-    if not token or not RECAPTCHA_SECRET_KEY:
-        return False
-    try:
-        resp = requests.post(
-            "https://www.google.com/recaptcha/api/siteverify",
-            data={"secret": RECAPTCHA_SECRET_KEY, "response": token},
-            timeout=5,
-        )
-        return resp.json().get("success", False)
-    except Exception:
-        return False
 
 # --- Page Config ---
 st.set_page_config(
@@ -376,23 +352,6 @@ hr { border-color: #6b1a1a !important; }
     color: #ff9999;
     margin: 2px 4px 2px 0;
 }
-.captcha-box {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    background: #1a0808;
-    border: 1px solid #5a1515;
-    border-radius: 8px;
-    padding: 14px 18px;
-    margin-top: 4px;
-}
-.captcha-logo {
-    font-size: 0.65rem;
-    color: #7a5050;
-    text-align: center;
-    line-height: 1.5;
-}
-
 /* ── NAV BAR ────────────────────────────────────────────────────────── */
 .navbar {
     display: flex;
@@ -415,6 +374,18 @@ hr { border-color: #6b1a1a !important; }
     color: #c0a0a0;
     letter-spacing: 0.12em;
     text-transform: uppercase;
+}
+.navbar-ytl {
+    font-size: 0.82rem;
+    color: #ff9999;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+.navbar-ytl:hover {
+    color: #ff6b6b;
+    text-shadow: 0 0 8px rgba(255,107,107,0.55);
 }
 
 /* ── HERO ───────────────────────────────────────────────────────────── */
@@ -456,12 +427,18 @@ hr { border-color: #6b1a1a !important; }
     letter-spacing: 0.04em;
 }
 .hero-subtitle {
-    font-size: 1.05rem;
+    font-size: 1rem;
     color: #c0a0a0;
-    max-width: 600px;
-    margin: 0 auto 28px;
-    line-height: 1.65;
+    max-width: 48rem;
+    width: 100%;
+    margin: 24px auto 28px;
+    line-height: 1.7;
+    text-align: center;
+    padding: 0 1rem;
     animation: heroFadeIn 0.7s ease 0.45s both;
+}
+@media (min-width: 768px) {
+    .hero-subtitle { font-size: 1.125rem; margin-top: 32px; }
 }
 .hero-badge {
     display: inline-block;
@@ -505,7 +482,7 @@ st.markdown("""
     </svg>
     AI Hiring Agent
   </span>
-  <span class="navbar-tagline">Powered by Groq &nbsp;|&nbsp; LLaMA 3.3</span>
+  <a href="https://ytlcourses.in" target="_blank" rel="noopener noreferrer" class="navbar-ytl">Powered by YTL Courses</a>
 </nav>
 """, unsafe_allow_html=True)
 
@@ -526,7 +503,6 @@ st.markdown("""
         Upload up to 20 resumes and let our AI extract, score, and rank
         your top 10 candidates in seconds &mdash; no manual screening required.
     </p>
-    <span class="hero-badge">&#128274; Secured with reCAPTCHA v2</span>
 </section>
 """, unsafe_allow_html=True)
 
@@ -575,86 +551,12 @@ else:
         unsafe_allow_html=True,
     )
 
-# =============================================================================
-# CAPTCHA CARD  (real reCAPTCHA v2)
-# =============================================================================
-st.markdown("""
-<div class="section-card">
-    <div class="card-header">
-        <span class="card-icon">&#128274;</span>
-        <div>
-            <p class="card-title">Human Verification</p>
-            <p class="card-subtitle">Google reCAPTCHA v2 &nbsp;&bull;&nbsp; Backend-verified</p>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# Render the real reCAPTCHA widget inside an iframe-like HTML component.
-# On solve, the token is written to localStorage under "recaptcha_token".
-components.html(f"""
-<!DOCTYPE html>
-<html>
-<head>
-  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-  <style>
-    body {{
-      background: #1a0a0a;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin: 0;
-      padding: 8px 0;
-    }}
-  </style>
-</head>
-<body>
-  <div class="g-recaptcha"
-       data-sitekey="{RECAPTCHA_SITE_KEY}"
-       data-callback="onCaptchaSolved"
-       data-expired-callback="onCaptchaExpired"
-       data-theme="dark">
-  </div>
-  <script>
-    function onCaptchaSolved(token) {{
-      window.parent.localStorage.setItem("recaptcha_token", token);
-    }}
-    function onCaptchaExpired() {{
-      window.parent.localStorage.removeItem("recaptcha_token");
-    }}
-  </script>
-</body>
-</html>
-""", height=100)
-
-# Read the token back into Python via localStorage
-raw_token = st_javascript("localStorage.getItem('recaptcha_token');")
-captcha_token = raw_token if isinstance(raw_token, str) and len(raw_token) > 20 else ""
-
-# Backend-verify the token (only once per token using session state)
-if captcha_token and st.session_state.get("verified_token") != captcha_token:
-    st.session_state["verified_token"] = captcha_token
-    st.session_state["captcha_verified"] = verify_recaptcha(captcha_token)
-
-captcha_verified: bool = True  # TEMP: bypass for local testing — revert to line below for production
-# captcha_verified: bool = st.session_state.get("captcha_verified", False)
-
-if captcha_verified:
-    st.markdown(
-        '<p style="color:#7aff4a;font-size:0.82rem;margin-top:6px;">&#10003; Verification passed</p>',
-        unsafe_allow_html=True,
-    )
-elif captcha_token:
-    st.error("reCAPTCHA verification failed. Please try again.")
-    st.session_state["captcha_verified"] = False
-
 st.divider()
 
 # --- Process Button ---
 can_process = (
     uploaded_files is not None
     and 1 <= len(uploaded_files) <= 20
-    and captcha_verified
 )
 
 process_clicked = st.button(
@@ -663,9 +565,6 @@ process_clicked = st.button(
     use_container_width=True,
     type="primary",
 )
-
-if not captcha_verified and uploaded_files and len(uploaded_files) <= 20:
-    st.caption("Complete the verification above to enable processing.")
 
 # --- On Click ---
 if process_clicked:
