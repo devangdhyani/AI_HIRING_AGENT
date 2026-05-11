@@ -394,6 +394,11 @@ hr { border-color: #6b1a1a !important; }
     padding: 56px 36px 44px;
     text-align: center;
     border-bottom: 1px solid #6b1a1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
 }
 .hero-eyebrow {
     font-size: 0.78rem;
@@ -429,9 +434,9 @@ hr { border-color: #6b1a1a !important; }
 .hero-subtitle {
     font-size: 1rem;
     color: #c0a0a0;
-    max-width: 48rem;
+    max-width: 42rem;
     width: 100%;
-    margin: 24px auto 28px;
+    margin: 24px 0 28px;
     line-height: 1.7;
     text-align: center;
     padding: 0 1rem;
